@@ -1,0 +1,216 @@
+#include <iostream>
+#include <fstream>
+#include "Bmp.h" 
+const double PI = 3.14;
+using namespace std; 
+
+Image::Bmp bmp;
+
+float** calcDCTmatrix(void)
+{
+	int i, j, sizeX, sizeY;
+	float N;
+	sizeX = sizeY = N = 8;
+	float ** DCT = (float **)malloc(sizeY * sizeof(float *));
+	for (i = 0; i < sizeX; i++) {
+		DCT[i] = (float *)malloc(sizeX * sizeof(float));
+	}
+
+	for (i = 0; i < sizeY; i++) {
+		for (j = 0; j < sizeX; j++) {
+			if (i == 0) {
+				DCT[i][j] = 1.0 / sqrt(N);
+			}
+			else {
+				DCT[i][j] = sqrt(2.0 / N) * cosf((2.0 * (float)j + 1.0) * (float)i * PI / 2.0 / N);
+			}
+		}
+	}
+	return DCT;
+}
+
+float** transMatrix(float **matrix, int row, int col)
+{
+	// dynamically allocate an array
+	float **result;
+	result = new float *[col]; //creates a new array of pointers to int objects
+	for (int i = 0; i < col; i++)
+		result[i] = new float[row];
+
+	// transposing
+	for (int i = 0; i<row; i++)
+	for (int j = 0; j<col; j++)
+		result[j][i] = matrix[i][j];
+
+	return result;
+}
+
+float** calcQuantMatrix(int quality)
+{
+	int i, j, sizeX, sizeY;
+	sizeX = sizeY = 8;
+	float** quantMatrix = (float**)malloc(sizeY * sizeof(float*));
+	for (i = 0; i < sizeX; i++) {
+		quantMatrix[i] = (float*)malloc(sizeX * sizeof(float));
+	}
+
+	for (i = 0; i < sizeY; i++) {
+		for (j = 0; j < sizeX; j++) {
+			quantMatrix[i][j] = 1 + ((1 + i + j) * quality);
+		}
+	}
+	return quantMatrix;
+}
+int main(){
+	// open a BMP file as binary mode
+	ifstream inFile;
+	inFile.open("LENA.raw", ios::binary);         // binary mode
+	if (!inFile.good()){
+		
+		return false;
+	}
+
+	int dataSize = 512 * 512 * 8 / 8;
+	unsigned char *encData = new unsigned char[dataSize];
+	unsigned char source[512][512];
+	unsigned char source2[512][512];
+	unsigned char source3[512][512];
+	unsigned char *hasil = new unsigned char[dataSize];
+	for (int y = 0; y < 512; y++){
+		for (int x = 0; x < 512; x++){
+			source2[y][x] = 0;
+			source3[y][x] = 0;
+			source[y][x] = encData[512 * y + x];
+			source[y][x] -= 128;
+		}
+	}
+
+
+	// read data from file
+	inFile.read((char*)encData, dataSize);
+	
+	float** DCTmatrix = calcDCTmatrix();
+
+	float** TranspDCTMatrx = transMatrix(DCTmatrix, 8, 8);
+	float** QuatnMatrix = calcQuantMatrix(128);
+	
+	int numOfSqrX = 512 / 8;
+	int numOfSqrY = 512 / 8;
+
+	/*float *hasil = new float[64];
+	float *hasil2 = new float[64];
+	hasil[0] = 52; hasil[1] = 55; hasil[2] = 61; hasil[3] = 66; hasil[4] = 70; hasil[5] = 61; hasil[6] = 64; hasil[7] = 73;
+	hasil[8] = 63; hasil[9] = 59; hasil[10] = 55; hasil[11] = 90; hasil[12] = 109; hasil[13] = 85; hasil[14] = 69; hasil[15] = 72;
+	hasil[16] = 62; hasil[17] = 59; hasil[18] = 68; hasil[19] = 113; hasil[20] = 144; hasil[21] = 104; hasil[22] = 66; hasil[23] = 73;
+	hasil[24] = 63; hasil[25] = 58; hasil[26] = 71; hasil[27] = 122; hasil[28] = 154; hasil[29] = 106; hasil[30] = 70; hasil[31] = 69;
+	hasil[32] = 67; hasil[33] = 61; hasil[34] = 68; hasil[35] = 104; hasil[36] = 126; hasil[37] = 88; hasil[38] = 68; hasil[39] = 70;
+	hasil[40] = 79; hasil[41] = 65; hasil[42] = 60; hasil[43] = 70; hasil[44] = 77; hasil[45] = 68; hasil[46] = 58; hasil[47] = 75;
+	hasil[48] = 85; hasil[49] = 71; hasil[50] = 64; hasil[51] = 59; hasil[52] = 55; hasil[53] = 61; hasil[54] = 65; hasil[55] = 83;
+	hasil[56] = 87; hasil[57] = 79; hasil[58] = 69; hasil[59] = 68; hasil[60] = 65; hasil[61] = 76; hasil[62] = 78; hasil[63] = 94;
+
+	*/
+
+	//for (int n = 0; n < 64; n++){
+	//	for (int m = 0; m < 64; m++){
+	//		for (int row = 0; row < 8; row++){
+	//			for (int col = 0; col < 8; col++){
+	//				for (int inner = 0; inner < 8; inner++){
+	//					//cout << x + 0 * 8 + 512 * y << " ";
+	//					//cout << (int)encData[x + 0 * 8 + 512 * y] << " ";
+	//					//hasil[x + 0 * 8 + 512 * y + m * 8 + n * 512] = (int)encData[x + 0 * 8 + 512 * y + m * 8 + n * 512] * DCTmatrix[y][x];
+	//					hasil[8 * row + col + m * 8 + n * 512] += encData[8 * row + inner + m * 8 + n * 512] * DCTmatrix[inner][col];
+	//						
+	//				}
+	//				///cout << hasil[8 * row + col] << " ";
+	//			}
+	//			//cout << "\n";
+	//		}
+	//		
+	//	}
+	//}
+
+	//int aMatrix[8][8] = {
+	//	{154,123,123,123,123,123,123,136},
+	//	{192,180,136,154,154,154,136,110},
+	//	{254,196,154,154,180,154,123,123},
+	//	{239,180,136,180,180,166,123,123},
+	//	{180,154,136,167,166,149,136,136},
+	//	{128,136,123,136,154,180,198,154},
+	//	{123,105,110,149,136,136,180,166},
+	//	{110,136,123,123,123,136,154,136}
+	//};
+
+	//for (int row = 0; row < 8; row++) {
+	//		for (int col = 0; col < 8; col++) {
+	//			aMatrix[row][col] -= 128;
+	//			//// multiply the row of a by the column of b to get the row, column of product.
+	//			//for (int inner = 0; inner < 8; inner++) {
+	//			//	product[row][col] += amatrix[row][inner] * bmatrix[inner][col];
+	//			//}
+	//			std::cout << QuatnMatrix[row][col] << "  ";
+	//		}
+	//		std::cout << "\n";
+	//	}
+	for (int n = 0; n < 64; n++){
+		for (int m = 0; m < 64; m++){
+			for (int row = 0; row < 8; row++){
+				for (int col = 0; col < 8; col++){
+					for (int inner = 0; inner < 8; inner++){
+						//cout << x + 0 * 8 + 512 * y << " ";
+						//cout << (int)encData[x + 0 * 8 + 512 * y] << " ";
+						//hasil[x + 0 * 8 + 512 * y + m * 8 + n * 512] = (int)encData[x + 0 * 8 + 512 * y + m * 8 + n * 512] * DCTmatrix[y][x];
+						source2[row][col] += source[row][inner] * TranspDCTMatrx[inner][col];
+
+					}
+					///cout << hasil[8 * row + col] << " ";
+				}
+				//cout << "\n";
+			}
+
+		}
+	}
+
+	for (int n = 0; n < 64; n++){
+		for (int m = 0; m < 64; m++){
+			for (int row = 0; row < 8; row++){
+				for (int col = 0; col < 8; col++){
+					for (int inner = 0; inner < 8; inner++){
+						//cout << x + 0 * 8 + 512 * y << " ";
+						//cout << (int)encData[x + 0 * 8 + 512 * y] << " ";
+						//hasil[x + 0 * 8 + 512 * y + m * 8 + n * 512] = (int)encData[x + 0 * 8 + 512 * y + m * 8 + n * 512] * DCTmatrix[y][x];
+						source3[row][col] += DCTmatrix[row][inner] * source2[inner][col];
+
+					}
+					///cout << hasil[8 * row + col] << " ";
+				}
+				//cout << "\n";
+			}
+
+		}
+	}
+
+	for (int y = 0; y < 512; y++){
+		for (int x = 0; x < 512; x++){
+			hasil[512 * y + x] = source3[y][x];
+		}
+	}
+
+	
+			//int aMatrix[3][3] = { { 1,2,3 }, { 4,5,6 }, { 7, 8,9 } };
+			//int bMatrix[3][3] = { { 10, 11, 12 }, { 13, 14, 15 }, {16,17,18} };
+			//int product[3][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+
+			//for (int row = 0; row < 3; row++) {
+			//	for (int col = 0; col < 3; col++) {
+			//		// Multiply the row of A by the column of B to get the row, column of product.
+			//		for (int inner = 0; inner < 3; inner++) {
+			//			product[row][col] += aMatrix[row][inner] * bMatrix[inner][col];
+			//		}
+			//		std::cout << product[row][col] << "  ";
+			//	}
+			//	std::cout << "\n";
+			//}
+	bmp.save("lena.bmp", 512, 512, 1, hasil); // save new image 
+	
+	return 0;
+}
